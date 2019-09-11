@@ -109,16 +109,22 @@ public class ApplicationContext {
 	public void loadResourceBundle() {
 		try {
 
-			if (null != applicationMap.get(RegistrationConstants.PRIMARY_LANGUAGE)) {
+			if (null != applicationMap.get(RegistrationConstants.PRIMARY_LANGUAGE)
+					&& !applicationMap.get(RegistrationConstants.PRIMARY_LANGUAGE).equals("")) {
 				applicationLanguge = (String) applicationMap.get(RegistrationConstants.PRIMARY_LANGUAGE);
 			} else {
 				applicationLanguge = Locale.getDefault().getDisplayLanguage() != null
 						? Locale.getDefault().getDisplayLanguage().toLowerCase().substring(0, 3)
 						: "eng";
 			}
-			localLanguage = applicationMap.get(RegistrationConstants.SECONDARY_LANGUAGE) != null
-					? (String) applicationMap.get(RegistrationConstants.SECONDARY_LANGUAGE)
-					: null;
+			if (null != applicationMap.get(RegistrationConstants.SECONDARY_LANGUAGE)
+					&& !applicationMap.get(RegistrationConstants.SECONDARY_LANGUAGE).equals("")) {
+				localLanguage = (String) applicationMap.get(RegistrationConstants.SECONDARY_LANGUAGE);
+			} else {
+				localLanguage = Locale.getDefault().getDisplayLanguage() != null
+						? Locale.getDefault().getDisplayLanguage().toLowerCase().substring(0, 3)
+						: "eng";
+			}
 			String rightToLeft = (String) applicationContext.getApplicationMap().get("mosip.right_to_left_orientation");
 
 			if (null != rightToLeft) {

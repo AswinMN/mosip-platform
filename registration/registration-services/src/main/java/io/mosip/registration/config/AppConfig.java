@@ -48,7 +48,7 @@ import io.mosip.kernel.templatemanager.velocity.builder.TemplateManagerBuilderIm
 				"io.mosip.kernel.applicanttype", "io.mosip.kernel.cbeffutil", "io.mosip.kernel.core.pdfgenerator.spi",
 				"io.mosip.kernel.pdfgenerator.itext.impl", "io.mosip.kernel.cryptosignature",
 				"io.mosip.kernel.core.signatureutil", "io.mosip.kernel.idobjectvalidator.impl","io.mosip.kernel.bioapi.impl" })
-@PropertySource(value = { "classpath:spring.properties", "classpath:spring-${spring.profiles.active}.properties" })
+@PropertySource(value = { "classpath:spring.properties" })
 @ImportAutoConfiguration(RefreshAutoConfiguration.class)
 @EnableConfigurationProperties
 public class AppConfig {
@@ -69,12 +69,12 @@ public class AppConfig {
 		MOSIP_ROLLING_APPENDER.setTotalCap("50MB");
 		MOSIP_ROLLING_APPENDER.setMaxHistory(10);
 		MOSIP_ROLLING_APPENDER.setImmediateFlush(true);
-		MOSIP_ROLLING_APPENDER.setPrudent(true);
 	}
 
 	public static Logger getLogger(Class<?> className) {
 		return Logfactory.getDefaultRollingFileLogger(MOSIP_ROLLING_APPENDER, className);
 	}
+	
 
 	@Bean
 	public RestTemplate getRestTemplate() {

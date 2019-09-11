@@ -106,21 +106,25 @@ public class ResponseSignatureAdvice {
 		try {
 
 			restClientResponse = (LinkedHashMap<String, Object>) result;
+			
+			LinkedHashMap<String, Object> keyResponse = (LinkedHashMap<String, Object>) restClientResponse
+					.get(RegistrationConstants.REST_RESPONSE_BODY);
 
-			if (null != requestDto && requestDto.getIsSignRequired()) {
+			if (null != requestDto 
+					&& requestDto.getIsSignRequired() 
+					&& null != keyResponse 
+					&& keyResponse.size() > 0 
+					&& null != keyResponse.get(RegistrationConstants.RESPONSE)) {
 
 				KeyStore keyStore = policySyncDAO.getPublicKey(RegistrationConstants.KER);
 
 				if (null != keyStore && null != keyStore.getPublicKey()) {
 					publicKey = new String(keyStore.getPublicKey());
 				} else {
-					LinkedHashMap<String, Object> keyResponse = (LinkedHashMap<String, Object>) restClientResponse
-							.get(RegistrationConstants.REST_RESPONSE_BODY);
-
-					if (null != keyResponse && keyResponse.size() > 0
-							&& null != keyResponse.get(RegistrationConstants.PACKET_STATUS_READER_RESPONSE)) {
+					if (keyResponse.size() > 0
+							&& null != keyResponse.get(RegistrationConstants.RESPONSE)) {
 						LinkedHashMap<String, Object> resp = (LinkedHashMap<String, Object>) keyResponse
-								.get(RegistrationConstants.PACKET_STATUS_READER_RESPONSE);
+								.get(RegistrationConstants.RESPONSE);
 						publicKey = (String) resp.get(RegistrationConstants.PUBLIC_KEY);
 					}
 				}
@@ -158,7 +162,7 @@ public class ResponseSignatureAdvice {
 		}
 
 		LOGGER.info(LoggerConstants.RESPONSE_SIGNATURE_VALIDATION, APPLICATION_ID, APPLICATION_NAME,
-				"succesfully leaving response signature method...");
+				"successfully leaving response signature method...");
 
 		return restClientResponse;
 

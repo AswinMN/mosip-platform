@@ -10,6 +10,7 @@ import java.util.TimerTask;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.lang3.exception.ExceptionUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import io.mosip.kernel.core.logger.spi.Logger;
@@ -21,6 +22,9 @@ import io.mosip.registration.constants.RegistrationConstants;
 import io.mosip.registration.constants.RegistrationUIConstants;
 import io.mosip.registration.context.SessionContext;
 import io.mosip.registration.controller.BaseController;
+import io.mosip.registration.controller.device.ScanPopUpViewController;
+import io.mosip.registration.controller.device.WebCameraController;
+import io.mosip.registration.controller.reg.PacketUploadController;
 import io.mosip.registration.exception.RegBaseCheckedException;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
@@ -32,6 +36,7 @@ import javafx.beans.property.SimpleIntegerProperty;
 import javafx.event.EventHandler;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.input.KeyCode;
@@ -75,10 +80,20 @@ public class SchedulerUtil extends BaseController {
 	private PauseTransition delay;
 	private int duration;
 
+	@Autowired
+	private WebCameraController webCameraController;
+
+	@Autowired
+	private ScanPopUpViewController scanPopUpViewController;
+
+	@Autowired
+	private PacketUploadController packetUploadController;
+
 	/**
 	 * Constructor to invoke scheduler method once login success.
 	 *
-	 * @throws RegBaseCheckedException the reg base checked exception
+	 * @throws RegBaseCheckedException
+	 *             the reg base checked exception
 	 */
 	public void startSchedulerUtil() throws RegBaseCheckedException {
 		LOGGER.info("REGISTRATION - UI", APPLICATION_NAME, APPLICATION_ID,
@@ -106,7 +121,7 @@ public class SchedulerUtil extends BaseController {
 						if (((endTime - startTime) >= refreshTime && (endTime - startTime) < sessionTimeOut)
 								&& isShowing == false) {
 							LOGGER.info("REGISTRATION - UI", APPLICATION_NAME, APPLICATION_ID,
-									"The time task remainder alert is called at interval of seconds "
+									"The time task reminder alert is called at interval of seconds "
 											+ TimeUnit.MILLISECONDS.toSeconds(endTime - startTime));
 							auditFactory.audit(AuditEvent.SCHEDULER_REFRESHED_TIMEOUT, Components.REFRESH_TIMEOUT,
 									APPLICATION_NAME, AuditReferenceIdTypes.APPLICATION_ID.getReferenceTypeId());
@@ -125,8 +140,10 @@ public class SchedulerUtil extends BaseController {
 	/**
 	 * To find the scheduler duration to run the scheduler interval.
 	 *
-	 * @param refreshTime    the refresh time
-	 * @param sessionTimeOut the session time out
+	 * @param refreshTime
+	 *            the refresh time
+	 * @param sessionTimeOut
+	 *            the session time out
 	 * @return the int
 	 */
 	private static int findTimeInterval(long refreshTime, long sessionTimeOut) {
@@ -246,13 +263,36 @@ public class SchedulerUtil extends BaseController {
 	}
 
 	private void stop() {
-		LOGGER.info("REGISTRATION - UI", APPLICATION_NAME, APPLICATION_ID, "The time task auto logout login called ");
+		LOGGER.info("REGISTRATION - UI", APPLICATION_NAME, APPLICATION_ID,
+				"The time task for auto logout and login called ");
 		auditFactory.audit(AuditEvent.SCHEDULER_SESSION_TIMEOUT, Components.SESSION_TIMEOUT, APPLICATION_NAME,
 				AuditReferenceIdTypes.APPLICATION_ID.getReferenceTypeId());
 		delay.stop();
 		stage.close();
 		// to stop scheduler
 		stopScheduler();
+		
+		// close webcam window, if open.
+		if (webCameraController.getWebCameraStage() != null && webCameraController.getWebCameraStage().isShowing()) {
+			webCameraController.getWebCameraStage().close();
+		}
+		if (getAlertStage() != null && getAlertStage().isShowing()) {
+			getAlertStage().close();
+		}
+		if (scanPopUpViewController.getPopupStage() != null && scanPopUpViewController.getPopupStage().isShowing()) {
+			scanPopUpViewController.getPopupStage().close();
+		}
+		if (packetUploadController.getStage() != null && packetUploadController.getStage().isShowing()) {
+			packetUploadController.getStage().close();
+		}
+		if (SessionContext.map() != null && SessionContext.map().get("alert")!=null) {
+			Alert alret=(Alert)SessionContext.map().get("alert");
+			alret.close();
+		}
+		if (SessionContext.map() != null && SessionContext.map().get("alertStage")!=null) {
+			Stage alertStage=(Stage)SessionContext.map().get("alertStage");
+			alertStage.close();
+		}
 		// to clear the session object
 		SessionContext.destroySession();
 		// load login screen

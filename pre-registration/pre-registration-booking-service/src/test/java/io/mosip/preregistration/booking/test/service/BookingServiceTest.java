@@ -24,7 +24,6 @@ import org.json.simple.parser.JSONParser;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,7 +53,6 @@ import io.mosip.preregistration.booking.dto.BookingRequestDTO;
 import io.mosip.preregistration.booking.dto.BookingStatus;
 import io.mosip.preregistration.booking.dto.BookingStatusDTO;
 import io.mosip.preregistration.booking.dto.CancelBookingDTO;
-import io.mosip.preregistration.booking.dto.CancelBookingResponseDTO;
 import io.mosip.preregistration.booking.dto.DateTimeDto;
 import io.mosip.preregistration.booking.dto.HolidayDto;
 import io.mosip.preregistration.booking.dto.MultiBookingRequest;
@@ -80,6 +78,7 @@ import io.mosip.preregistration.core.code.AuditLogVariables;
 import io.mosip.preregistration.core.code.StatusCodes;
 import io.mosip.preregistration.core.common.dto.AuditRequestDto;
 import io.mosip.preregistration.core.common.dto.BookingRegistrationDTO;
+import io.mosip.preregistration.core.common.dto.CancelBookingResponseDTO;
 import io.mosip.preregistration.core.common.dto.DeleteBookingDTO;
 import io.mosip.preregistration.core.common.dto.MainRequestDTO;
 import io.mosip.preregistration.core.common.dto.MainResponseDTO;
@@ -225,7 +224,7 @@ public class BookingServiceTest {
 		slots.setToTime(localTime2);
 		slotsList.add(slots);
 		dateDto.setDate("2018-12-04");
-		dateDto.setHoliday(true);
+		dateDto.setHoliday(false);
 		dateDto.setTimeSlots(slotsList);
 		dateList.add(dateDto);
 		availability.setCenterDetails(dateList);
@@ -355,33 +354,102 @@ public class BookingServiceTest {
 	@Test
 	public void getAvailabilityTest() {
 
-		// Mockito.doNothing().when(service).setAuditValues(Mockito.any(),
-		// Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(),
-		// Mockito.any());
 		logger.info("Availability dto " + availability);
+		AvailibityEntity availableEntity1 = new AvailibityEntity();
+
+		availableEntity1.setAvailableKiosks(4);
+		availableEntity1.setRegcntrId("1");
+		availableEntity1.setRegDate(LocalDate.parse("2019-12-04"));
+		availableEntity1.setToTime(localTime2);
+		availableEntity1.setFromTime(localTime1);
+		availableEntity1.setCrBy("987654321");
+		availableEntity1.setCrDate(DateUtils.parseDateToLocalDateTime(new Date()));
+		availableEntity1.setDeleted(false);
 		List<LocalDate> date = new ArrayList<>();
 		List<AvailibityEntity> entityList = new ArrayList<>();
 		date.add(LocalDate.now());
 		entityList.add(availableEntity);
+		entityList.add(availableEntity1);
 		logger.info("Availability entity " + availableEntity);
-		Mockito.when(bookingDAO.findDate(Mockito.anyString(), Mockito.any(), Mockito.any())).thenReturn(date);
-		Mockito.when(bookingDAO.findByRegcntrIdAndRegDateOrderByFromTimeAsc(Mockito.anyString(), Mockito.any()))
+		String date1 = "2016-11-09 09:00:00";
+		String date2 = "2016-11-09 17:00:00";
+		String date3 = "2016-11-09 00:20:00";
+		String date4 = "2016-11-09 13:00:00";
+		String date5 = "2016-11-09 14:20:00";
+		LocalDateTime localDateTime1 = LocalDateTime.parse(date1, format);
+		LocalDateTime localDateTime2 = LocalDateTime.parse(date2, format);
+		LocalDateTime localDateTime3 = LocalDateTime.parse(date3, format);
+		LocalTime startTime = localDateTime1.toLocalTime();
+		LocalTime endTime = localDateTime2.toLocalTime();
+		LocalTime perKioskTime = localDateTime3.toLocalTime();
+		LocalTime LunchStartTime = LocalDateTime.parse(date4, format).toLocalTime();
+		LocalTime LunchEndTime = LocalDateTime.parse(date5, format).toLocalTime();
+		RegistrationCenterDto centerDto = new RegistrationCenterDto();
+		List<RegistrationCenterDto> centerList = new ArrayList<>();
+		centerDto.setId("10001");
+		centerDto.setLangCode("eng");
+		centerDto.setCenterStartTime(startTime);
+		centerDto.setCenterEndTime(endTime);
+		centerDto.setPerKioskProcessTime(perKioskTime);
+		centerDto.setLunchStartTime(LunchStartTime);
+		centerDto.setLunchEndTime(LunchEndTime);
+		centerDto.setNumberOfKiosks((short) 4);
+		centerList.add(centerDto);
+		regCenDto.setRegistrationCenters(centerList);
+		ResponseWrapper<RegistrationCenterResponseDto> resp = new ResponseWrapper<>();
+		resp.setResponse(regCenDto);
+		ResponseEntity<ResponseWrapper<RegistrationCenterResponseDto>> res = new ResponseEntity<>(resp, HttpStatus.OK);
+		Mockito.when(restTemplate.exchange(Mockito.anyString(), Mockito.eq(HttpMethod.GET), Mockito.any(),
+				Mockito.eq(new ParameterizedTypeReference<ResponseWrapper<RegistrationCenterResponseDto>>() {
+				}))).thenReturn(res);
+	//	Mockito.when(bookingDAO.findDate(Mockito.anyString(), Mockito.any(), Mockito.any())).thenReturn(date);
+		Mockito.when(bookingDAO.findAvailability(Mockito.anyString(), Mockito.any(),Mockito.any()))
 				.thenReturn(entityList);
-		MainResponseDTO<AvailabilityDto> responseDto = service.getAvailability("1");
+		MainResponseDTO<AvailabilityDto> responseDto = service.getAvailability("10001");
 		logger.info("Response " + responseDto);
-		assertEquals("1", responseDto.getResponse().getRegCenterId());
+		assertEquals("10001", responseDto.getResponse().getRegCenterId());
 
 	}
 
 	@Test(expected = TableNotAccessibleException.class)
 	public void getAvailabilityFailureTest() {
 
-		Mockito.when(bookingDAO.findDate(Mockito.anyString(), Mockito.any(), Mockito.any()))
+		String date1 = "2016-11-09 09:00:00";
+		String date2 = "2016-11-09 17:00:00";
+		String date3 = "2016-11-09 00:20:00";
+		String date4 = "2016-11-09 13:00:00";
+		String date5 = "2016-11-09 14:20:00";
+		LocalDateTime localDateTime1 = LocalDateTime.parse(date1, format);
+		LocalDateTime localDateTime2 = LocalDateTime.parse(date2, format);
+		LocalDateTime localDateTime3 = LocalDateTime.parse(date3, format);
+		LocalTime startTime = localDateTime1.toLocalTime();
+		LocalTime endTime = localDateTime2.toLocalTime();
+		LocalTime perKioskTime = localDateTime3.toLocalTime();
+		LocalTime LunchStartTime = LocalDateTime.parse(date4, format).toLocalTime();
+		LocalTime LunchEndTime = LocalDateTime.parse(date5, format).toLocalTime();
+		RegistrationCenterDto centerDto = new RegistrationCenterDto();
+		List<RegistrationCenterDto> centerList = new ArrayList<>();
+		centerDto.setId("10001");
+		centerDto.setLangCode("eng");
+		centerDto.setCenterStartTime(startTime);
+		centerDto.setCenterEndTime(endTime);
+		centerDto.setPerKioskProcessTime(perKioskTime);
+		centerDto.setLunchStartTime(LunchStartTime);
+		centerDto.setLunchEndTime(LunchEndTime);
+		centerDto.setNumberOfKiosks((short) 4);
+		centerList.add(centerDto);
+		regCenDto.setRegistrationCenters(centerList);
+		ResponseWrapper<RegistrationCenterResponseDto> resp = new ResponseWrapper<>();
+		resp.setResponse(regCenDto);
+		ResponseEntity<ResponseWrapper<RegistrationCenterResponseDto>> res = new ResponseEntity<>(resp, HttpStatus.OK);
+		Mockito.when(restTemplate.exchange(Mockito.anyString(), Mockito.eq(HttpMethod.GET), Mockito.any(),
+				Mockito.eq(new ParameterizedTypeReference<ResponseWrapper<RegistrationCenterResponseDto>>() {
+				}))).thenReturn(res);
+		Mockito.when(bookingDAO.findAvailability(Mockito.anyString(), Mockito.any(),Mockito.any()))
 				.thenThrow(new DataAccessLayerException("", "", new Throwable()));
 		service.getAvailability("1");
 
 	}
-
 	@SuppressWarnings("unchecked")
 	@Test
 	public void successBookAppointment() {
@@ -1675,7 +1743,7 @@ public class BookingServiceTest {
 	@Test(expected = TimeSpanException.class)
 	public void cancelTimeSpanFailureTest() throws java.text.ParseException {
 		AppointmentReBookException exception = new AppointmentReBookException(ErrorCodes.PRG_BOOK_RCI_026.getCode(),
-				ErrorMessages.BOOKING_STATUS_CANNOT_BE_ALTERED.getMessage());
+				ErrorMessages.CANCEL_BOOKING_CANNOT_BE_DONE.getMessage());
 
 		List<RegistrationBookingEntity> registrationEntityList = new ArrayList<>();
 		RegistrationBookingEntity bookingEntity = new RegistrationBookingEntity();

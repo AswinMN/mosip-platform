@@ -71,11 +71,13 @@ import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.control.cell.CheckBoxTableCell;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.StackPane;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.stage.StageStyle;
 import javafx.util.Callback;
 
 @Controller
@@ -139,13 +141,15 @@ public class PacketUploadController extends BaseController implements Initializa
 
 	private SortedList<PacketStatusVO> sortedList;
 
+	private Stage stage;
+
 	/**
 	 * This method is used to Sync as well as upload the packets.
 	 * 
 	 */
 	public void syncAndUploadPacket() {
 
-		LOGGER.info("REGISTRATION - SYNCH_PACKETS_AND_PUSH_TO_SERVER - PACKET_UPLOAD_CONTROLLER", APPLICATION_NAME,
+		LOGGER.info("REGISTRATION - SYNC_PACKETS_AND_PUSH_TO_SERVER - PACKET_UPLOAD_CONTROLLER", APPLICATION_NAME,
 				APPLICATION_ID, "Sync the packets and push it to the server");
 		observableList.clear();
 		table.refresh();
@@ -155,10 +159,9 @@ public class PacketUploadController extends BaseController implements Initializa
 				if (!selectedPackets.isEmpty()) {
 					List<PacketStatusDTO> packetsToBeSynced = new ArrayList<>();
 					selectedPackets.forEach(packet -> {
-						if (packet.getPacketServerStatus() == null
-								|| !packet.getPacketServerStatus()
-										.equalsIgnoreCase(RegistrationConstants.SERVER_STATUS_RESEND)
-								|| !RegistrationClientStatusCode.META_INFO_SYN_SERVER.getCode()
+						if ((packet.getPacketServerStatus() == null || !RegistrationConstants.SERVER_STATUS_RESEND
+								.equalsIgnoreCase(packet.getPacketServerStatus()))
+								&& !RegistrationClientStatusCode.META_INFO_SYN_SERVER.getCode()
 										.equalsIgnoreCase(packet.getPacketClientStatus())) {
 							PacketStatusDTO packetStatusVO = new PacketStatusDTO();
 							packetStatusVO.setClientStatusComments(packet.getClientStatusComments());
@@ -190,6 +193,7 @@ public class PacketUploadController extends BaseController implements Initializa
 					if (!packetsToBeSynced.isEmpty()) {
 						String packetSyncStatus = packetSynchService.packetSync(packetsToBeSynced);
 						if (!RegistrationConstants.EMPTY.equals(packetSyncStatus)) {
+							selectAllCheckBox.setSelected(false);
 							generateAlert(RegistrationConstants.ERROR, RegistrationUIConstants.SYNC_FAILURE);
 						}
 					}
@@ -281,7 +285,7 @@ public class PacketUploadController extends BaseController implements Initializa
 													RegistrationUIConstants.PACKET_UPLOAD_SUCCESS);
 
 										} else if (response.getErrorResponseDTOs() != null) {
-											String errMessage = response.getErrorResponseDTOs().get(0).getMessage();
+											String errMessage = response.getErrorResponseDTOs().get(0).getMessage().toLowerCase();
 											if (errMessage.contains(RegistrationConstants.PACKET_DUPLICATE)) {
 
 												tableMap.put(synchedPacket.getFileName(),
@@ -320,7 +324,8 @@ public class PacketUploadController extends BaseController implements Initializa
 
 									synchedPacket.setUploadStatus(
 											RegistrationClientStatusCode.UPLOAD_ERROR_STATUS.getCode());
-									if(regBaseCheckedException.getErrorCode().equals(RegistrationExceptionConstants.AUTH_ADVICE_USR_ERROR.getErrorCode())) {
+									if (regBaseCheckedException.getErrorCode().equals(
+											RegistrationExceptionConstants.AUTH_ADVICE_USR_ERROR.getErrorCode())) {
 										tableMap.put(synchedPacket.getFileName(),
 												RegistrationUIConstants.AUTH_ADVICE_FAILURE);
 									} else {
@@ -538,7 +543,7 @@ public class PacketUploadController extends BaseController implements Initializa
 		table.setDisable(synchedPackets.isEmpty());
 		saveToDevice.setVisible(!synchedPackets.isEmpty());
 		uploadBtn.setVisible(!synchedPackets.isEmpty());
-
+		selectAllCheckBox.setSelected(false);
 		List<PacketStatusVO> packetsToBeExport = new ArrayList<>();
 		int count = 1;
 		for (PacketStatusDTO packet : synchedPackets) {
@@ -571,6 +576,8 @@ public class PacketUploadController extends BaseController implements Initializa
 		fileNameColumn.setResizable(false);
 		checkBoxColumn.setResizable(false);
 		regDate.setResizable(false);
+
+		disableColumnsReorder(table);
 		// fileColumn.setResizable(false);
 		// statusColumn.setResizable(false);
 	}
@@ -579,7 +586,7 @@ public class PacketUploadController extends BaseController implements Initializa
 	private void displayStatus(List<PacketStatusDTO> filesToDisplay) {
 		Platform.runLater(() -> {
 
-			Stage stage = new Stage();
+			stage = new Stage();
 
 			stage.setTitle(RegistrationUIConstants.PACKET_UPLOAD_HEADER_NAME);
 			stage.setWidth(500);
@@ -603,11 +610,14 @@ public class PacketUploadController extends BaseController implements Initializa
 			Scene scene = new Scene(new StackPane(statusTable), 800, 800);
 			scene.getStylesheets().add(ClassLoader.getSystemClassLoader()
 					.getResource(RegistrationConstants.CSS_FILE_PATH).toExternalForm());
+			stage.initStyle(StageStyle.UTILITY);
 			stage.initModality(Modality.WINDOW_MODAL);
 			stage.initOwner(fXComponents.getStage());
 			stage.setResizable(false);
 			stage.setScene(scene);
+			stage.setTitle(RegistrationUIConstants.ALERT_NOTE_LABEL);
 			stage.show();
+			selectAllCheckBox.setSelected(false);
 			stage.setOnCloseRequest((e) -> {
 				saveToDevice.setDisable(false);
 				loadInitialPage();
@@ -676,4 +686,13 @@ public class PacketUploadController extends BaseController implements Initializa
 		DateTimeFormatter format = DateTimeFormatter.ofPattern(RegistrationConstants.EOD_PROCESS_DATE_FORMAT_FOR_FILE);
 		return LocalDateTime.now().format(format);
 	}
+
+	public Stage getStage() {
+		return stage;
+	}
+
+	public void setStage(Stage stage) {
+		this.stage = stage;
+	}
+
 }

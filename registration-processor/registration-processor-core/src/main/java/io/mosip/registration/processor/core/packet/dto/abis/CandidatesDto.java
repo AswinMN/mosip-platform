@@ -26,20 +26,7 @@ public class CandidatesDto implements Serializable {
 	private String internalScore;
 	
 	private Analytics[] analytics;
-	public Analytics[] getAnalytics() {
-		return analytics;
-	}
-
-	public void setAnalytics(Analytics[] analytics) {
-		this.analytics = analytics!=null?analytics:null;
-	}
 	
 	private AbisScores[] scores;
-	public AbisScores[] getScores() {
-		return scores;
-	}
-
-	public void setAbisScores(AbisScores[] scores) {
-		this.scores = scores!=null?scores:null;
-	}
+	
 }
